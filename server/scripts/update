@@ -1,0 +1,7 @@
+#!/bin/bash
+
+COMMAND=$1
+TOKEN=$2
+ARG=$3
+
+curl -X PUT "127.0.0.1:8081/nodes/${COMMAND}/${TOKEN}/${ARG}"
