@@ -18,7 +18,9 @@ var OK = JSON.stringify({status: 'OK'});
 var localToken = '???';
 
 function buildLocalToken(callback) {
-  if (process.platform === 'darwin') {
+  if (process.env.TOKEN) {
+    callback(null, process.env.TOKEN);
+  }else if (process.platform === 'darwin') {
     localTokenMac(callback);
   } else if (process.platform === 'linux') {
     localTokenLinux(callback);
@@ -54,7 +56,7 @@ function localTokenMac(callback) {
 
 function updateStatus(req, res, next) {
   fs.writeFileSync(statusFile, req.params.status);
-  client.setState(localToken, req.params.state, function(err, obj) {
+  client.setState(localToken, req.params.status, function(err, obj) {
     // ignore errors for now.
     res.send(JSON.stringify(obj));
   });
@@ -78,13 +80,19 @@ function dumpState(req, res, next) {
   res.send(JSON.stringify(state));
 }
 
-app.set('port', process.env.PORT || 8082);
+app.set('port', process.env.LOCAL_PORT || 8082);
 app.set('/', function(req, res) {
   res.send('<html><body><p>Root of local Presents.</p></body>')
 });
+
+// update my status
 app.put('/status/:status', updateStatus);
+
+// update my interest
 app.put('/interest/:token', updateInterest);
-app.put('/state', dumpState);
+
+// show my state.
+app.get('/state', dumpState);
 
 function setLocalToken(callback) {
   buildLocalToken(function(err, token) {
@@ -108,7 +116,8 @@ function startServer(callback) {
 function startPullTimer(callback) {
   var ival = setInterval(function getServerState() {
     client.getState(localToken, function(err, obj) {
-      fs.writeFileSync(statusFile, obj.status);
+      console.log(obj);
+      fs.writeFileSync(statusFile, obj.interest_status);
       fs.writeFileSync(interestFile, obj.interest);
     });
   }, 15000);
@@ -125,7 +134,9 @@ async.series([
     console.log(err);
     process.exit(-1);
   } else {
-    console.log(results);
+    //console.log(results);
+    console.log('interest file: ' + interestFile);
+    console.log('status file: ' + statusFile);
     console.log('All is good');
   }
 });
