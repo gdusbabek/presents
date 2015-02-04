@@ -1,6 +1,7 @@
 var Statuses = {
   Awake: 'awake',
-  Sleeping: 'sleeping'
+  Sleeping: 'sleeping',
+  Unknown: 'unknown'
 };
 
 var http = require('http');
@@ -48,8 +49,18 @@ function getAllStates(req, res, next) {
 }
 
 function saveState(file) {
-  console.log('writing state to ' + file);
+  //console.log('writing state to ' + file);
   fs.writeFileSync(file, JSON.stringify(appStates, null, 2));
+}
+
+function readState(file) {
+  if (fs.existsSync(file)) {
+    console.log('Reading existing state file at ' + file);
+    return JSON.parse(fs.readFileSync(file));
+  } else {
+    console.log('Sync file not found, creating new.');
+    return {};
+  }
 }
 
 var app = express();
@@ -64,11 +75,12 @@ app.put('/nodes/interest/:token/:interest', updateInterest);
 app.get('/nodes/:token', getState);
 app.get('/nodes', getAllStates);
 
-// todo: read state if it exists.
+console.log('Using state file at: ' + stateFile);
+appStates = readState(stateFile);
 
 http.createServer(app).listen(app.get('port'), function() {
   console.log('Global Presents have started on port ' + app.get('port'));
 });
 
 
-timers.setInterval(saveState.bind(null, stateFile), 30000);
+timers.setInterval(saveState.bind(null, stateFile), 1000);
