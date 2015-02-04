@@ -18,7 +18,8 @@ function getAppState(token) {
   if (!state) {
     state = {
       status: Statuses.Sleeping,
-      interest: null
+      interest: null,
+      interest_status: null
     };
     appStates[token] = state;
   }
@@ -26,16 +27,22 @@ function getAppState(token) {
 }
 
 function updateStatus(req, res, next) {
+  console.log('updating status for ' + req.params.token + ' to ' + req.params.status);
   getAppState(req.params.token).status = req.params.status;
   res.send(OK);
 }
 
 function getState(req, res, next) {
-  console.log('getting state ' + req.params.token);
-  res.send(JSON.stringify(getAppState(req.params.token)));
+  //console.log('getting state ' + req.params.token);
+  var state = getAppState(req.params.token);
+  if (state.interest) {
+    state.interest_status = getAppState(state.interest).status;
+  }
+  res.send(JSON.stringify(state));
 }
 
 function updateInterest(req, res, next) {
+  console.log('updating interest for ' + req.params.token + ' to ' + req.params.interest);
   getAppState(req.params.token).interest = req.params.interest;
   res.send(OK);
 }
