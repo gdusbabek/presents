@@ -6,8 +6,10 @@ var crypto = require('crypto');
 var child_process = require('child_process');
 
 var async = require('async');
+var gpio = require('rpi-gpio');
 
 var Client = require('./global_client').Client;
+var lights = require('./lights');
 
 var app = express();
 
@@ -16,6 +18,10 @@ var interestFile = process.env.INTEREST_FILE || '/opt/presents/interest';
 var client = new Client(process.env.SERVER_HOST || '127.0.0.1', process.env.SERVER_PORT || 8081);
 var OK = JSON.stringify({status: 'OK'});
 var localToken = '???';
+
+var LOCAL_STATUS_PIN = process.env.LOCAL_STATUS_PIN;
+var REMOTE_STATUS_PIN = process.env.REMOTE_STATUS_PIN;
+var BUTTON_PIN = process.env.BUTTON_PIN;
 
 function buildLocalToken(callback) {
   if (process.env.TOKEN) {
@@ -119,15 +125,33 @@ function startPullTimer(callback) {
       console.log(obj);
       fs.writeFileSync(statusFile, obj.interest_status);
       fs.writeFileSync(interestFile, obj.interest);
+      if (obj.interest_status === 'awake') {
+        lights.on(11, function(err) {
+          callback(err, 'light on:w');
+        });
+      } else {
+        lights.off(11, function(err) {
+          callback(err, 'light off')
+        });
+      }
     });
   }, 15000);
   callback(null, ival);
+}
+
+function buttonAwareness(callback) {
+  gpio.on('change', function(channel, value) {
+    console.log('Channel ' + channel + ' value is now ' + value);
+  });
+  gpio.setup(BUTTON_PIN, gpio.DIR_IN);
+  callback(null);
 }
 
 async.series([
   setLocalToken,
   startServer,
   startPullTimer,
+  startButtonAwareness,
 ], function(err, results) {
   if (err) {
     console.log('There was a problem');
