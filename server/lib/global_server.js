@@ -70,17 +70,31 @@ function readState(file) {
   }
 }
 
+function ui(req, res, next) {
+  res.render('ui', {
+    tokens: Object.keys(appStates),
+    states: appStates
+  });
+}
+
 var app = express();
+
+app.set('view engine', 'jade');
+app.set('views', __dirname + '/../site/views');
+app.set('view options', {layout: false});
+app.use(express.static(__dirname + '/../site/public'));
 
 app.set('port', process.env.PORT || 8081);
 app.set('stateFile', stateFile);
-app.set('/', function(req, res) {
-  res.send('<html><body><p>Root of global Presents.</p></body></html>')
-});
+
 app.put('/nodes/status/:token/:status', updateStatus);
 app.put('/nodes/interest/:token/:interest', updateInterest);
+app.get('/', function(req, res) {
+  res.send('<html><body><p>Root of global Presents.</p></body></html>')
+});
 app.get('/nodes/:token', getState);
 app.get('/nodes', getAllStates);
+app.get('/ui', ui);
 
 console.log('Using state file at: ' + stateFile);
 appStates = readState(stateFile);

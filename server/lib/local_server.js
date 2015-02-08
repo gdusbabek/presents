@@ -1,9 +1,7 @@
 var http = require('http');
 var express = require('express');
-var timers = require('timers');
 var fs = require('fs');
 var crypto = require('crypto');
-var child_process = require('child_process');
 
 var async = require('async');
 var gpio = require('rpi-gpio');
@@ -15,19 +13,20 @@ var app = express();
 
 var statusFile = process.env.STATUS_FILE || '/opt/presents/status';
 var interestFile = process.env.INTEREST_FILE || '/opt/presents/interest';
-var client = new Client(process.env.SERVER_HOST || '127.0.0.1', process.env.SERVER_PORT || 8081);
+var client = new Client(process.env.GLOBAL_HOST || '127.0.0.1', process.env.GLOBAL_PORT || 8081);
 var OK = JSON.stringify({status: 'OK'});
 var localToken = '???';
 
 var LOCAL_STATUS_PIN = process.env.LOCAL_STATUS_PIN;
 var REMOTE_STATUS_PIN = process.env.REMOTE_STATUS_PIN;
-var BUTTON_PIN = process.env.BUTTON_PIN;
+var AWAKE_BUTTON_PIN = process.env.AWAKE_BUTTON_PIN;
+var hasGpio = LOCAL_STATUS_PIN > 0 && REMOTE_STATUS_PIN > 0 && AWAKE_BUTTON_PIN > 0;
 
 function buildLocalToken(callback) {
   if (process.env.TOKEN) {
     callback(null, process.env.TOKEN);
   }else if (process.platform === 'darwin') {
-    localTokenMac(callback);
+    callback(null, 'lame_darwin');
   } else if (process.platform === 'linux') {
     localTokenLinux(callback);
   } else {
@@ -39,25 +38,6 @@ function localTokenLinux(callback) {
   var algo = crypto.createHash('md5');
   algo.update(fs.readFileSync('/proc/cpuinfo'));
   callback(null, algo.digest('hex'));
-}
-
-function localTokenMac(callback) {
-  //var cmd = 'system_profiler SPHardwareDataType | awk \'/Serial Number/ { print $4; }\'',
-  //    shCmd = child_process.spawn('/bin/bash', ['-c', cmd]),
-  //    results = '';
-  //shCmd.on('data', function(data) {
-  //  results += data;
-  //  console.log(data);
-  //});
-  //shCmd.on('close', function(code) {
-  //  console.log(code);
-  //  callback(null, results);
-  //});
-  //shCmd.on('error', function(err) {
-  //  console.log(err);
-  //  callback(err, results);
-  //});
-  callback(null, 'lame_mac_token_0000');
 }
 
 function updateStatus(req, res, next) {
@@ -125,14 +105,16 @@ function startPullTimer(callback) {
       console.log(obj);
       fs.writeFileSync(statusFile, obj.interest_status);
       fs.writeFileSync(interestFile, obj.interest);
-      if (obj.interest_status === 'awake') {
-        lights.on(11, function(err) {
-          callback(err, 'light on:w');
-        });
+      if (hasGpio) {
+        if (obj.interest_status === 'awake') {
+          lights.on(11, function (err) {});
+        } else if (obj.interest_status === 'sleeping') {
+          lights.off(11, function (err) {});
+        } else {
+          // dunno.
+        }
       } else {
-        lights.off(11, function(err) {
-          callback(err, 'light off')
-        });
+        // 
       }
     });
   }, 15000);
@@ -140,18 +122,20 @@ function startPullTimer(callback) {
 }
 
 function buttonAwareness(callback) {
-  gpio.on('change', function(channel, value) {
-    console.log('Channel ' + channel + ' value is now ' + value);
-  });
-  gpio.setup(BUTTON_PIN, gpio.DIR_IN);
-  callback(null);
+  if (hasGpio) {
+    gpio.on('change', function (channel, value) {
+      console.log('Channel ' + channel + ' value is now ' + value);
+    });
+    gpio.setup(AWAKE_BUTTON_PIN, gpio.DIR_IN);
+  }
+  callback(null, null);
 }
 
 async.series([
   setLocalToken,
+  buttonAwareness,
   startServer,
-  startPullTimer,
-  startButtonAwareness,
+  startPullTimer
 ], function(err, results) {
   if (err) {
     console.log('There was a problem');

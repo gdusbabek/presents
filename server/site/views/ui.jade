@@ -1,0 +1,23 @@
+
+html(lang="en")
+  head
+    title Presents
+    script(src='/js/api.js')
+  body
+    h1 You are at presents.
+    
+    div
+      each token in tokens
+        div
+          span token: #{token}
+            br
+          label status
+            input(type="text" name="status_#{token}" value="#{states[token].status}" onblur="put('/nodes/status/#{token}/' + this.value, true);")
+            br
+          label interest
+            input(type="text" name="interest_#{token}" value="#{states[token].interest}" onblur="put('/nodes/interest/#{token}/' + this.value, true);")
+            br
+          span interest_status: #{states[token].interest_status} 
+            br
+        br
+      

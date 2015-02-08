@@ -8,7 +8,8 @@
     "express": "4.10.7",
     "minimist": "1.1.0",
     "request": "2.51.0",
-    "rpi-gpio": "0.5.1"
+    "rpi-gpio": "0.5.1",
+    "jade": "~1.3.0"
   },
   "devDependencies": {
   },
@@ -17,6 +18,8 @@
     "npm": ">=1.4.28"
   },
   "scripts": {
-    "test": "./scripts/test.sh"
+    "test": "./scripts/test.sh",
+    "global_server": "./server/scripts/global_server.sh",
+    "local_server": "./server/scripts/local_server.sh"
   }
 }
