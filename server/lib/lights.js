@@ -9,10 +9,12 @@ function doPin(pin, on, callback) {
 }
 
 function on(pin, callback) {
+  console.log('ON ' + pin);
   doPin(pin, true, callback);
 }
 
 function off(pin, callback) {
+  console.log('OFF ' + pin);
   doPin(pin, false, callback);
 }
 

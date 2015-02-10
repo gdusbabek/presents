@@ -130,18 +130,20 @@ function startPullTimer(callback) {
       if (newLocalState.status !== localState.status) {
         console.log('Setting status ' + localState.status + ' to ' + newLocalState.status);
       }
-      localState = newLocalState;
-      if (hasGpio) {
+      
+      if (hasGpio && newLocalState.interest_status !== localState.interest_status) {
         if (obj.interest_status === 'awake') {
-          lights.on(11, function (err) {});
+          lights.on(REMOTE_STATUS_PIN, function (err) {});
         } else if (obj.interest_status === 'sleeping') {
-          lights.off(11, function (err) {});
+          lights.off(REMOTE_STATUS_PIN, function (err) {});
         } else {
           // dunno.
         }
       } else {
         // 
       }
+      
+      localState = newLocalState;
     });
   }, 1500);
   callback(null, ival);
