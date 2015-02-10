@@ -22,6 +22,13 @@ var REMOTE_STATUS_PIN = process.env.REMOTE_STATUS_PIN;
 var AWAKE_BUTTON_PIN = process.env.AWAKE_BUTTON_PIN;
 var hasGpio = LOCAL_STATUS_PIN > 0 && REMOTE_STATUS_PIN > 0 && AWAKE_BUTTON_PIN > 0;
 
+var localState = {
+  token: null,
+  status: null,
+  interest: null,
+  interest_status: null
+};
+
 function buildLocalToken(callback) {
   if (process.env.TOKEN) {
     callback(null, process.env.TOKEN);
@@ -102,9 +109,28 @@ function startServer(callback) {
 function startPullTimer(callback) {
   var ival = setInterval(function getServerState() {
     client.getState(localToken, function(err, obj) {
-      console.log(obj);
+      //console.log(obj);
       fs.writeFileSync(statusFile, obj.interest_status);
       fs.writeFileSync(interestFile, obj.interest);
+      var newLocalState = {
+        token: localToken,
+        status: obj.status,
+        interest: obj.interest,
+        interest_status: obj.interest_status
+      };
+      if (newLocalState.token !== localState.token) {
+        console.log('Setting token ' + localState.token + ' to ' + newLocalState.token);
+      }
+      if (newLocalState.interest !== localState.interest) {
+        console.log('Setting interest ' + localState.interest + ' to ' + newLocalState.interest);
+      }
+      if (newLocalState.interest_status !== localState.interest_status) {
+        console.log('Setting interest_status ' + localState.interest_status + ' to ' + newLocalState.interest_status);
+      }
+      if (newLocalState.status !== localState.status) {
+        console.log('Setting status ' + localState.status + ' to ' + newLocalState.status);
+      }
+      localState = newLocalState;
       if (hasGpio) {
         if (obj.interest_status === 'awake') {
           lights.on(11, function (err) {});
@@ -117,7 +143,7 @@ function startPullTimer(callback) {
         // 
       }
     });
-  }, 15000);
+  }, 1500);
   callback(null, ival);
 }
 
